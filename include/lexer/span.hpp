@@ -4,7 +4,7 @@
 #include "../core/macros.hpp"
 
 struct Location {
-  u32 start{1};
+  u32 line{1};
   u32 col{1};
 };
 

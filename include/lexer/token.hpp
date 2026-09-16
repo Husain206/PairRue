@@ -5,15 +5,16 @@
 
 #define _SPECIAL_ X(TK_EoF, "EOF") X(TK_INVALID, "INVALID")
 #define _KEYWORDS_                                                             \
-  X(TK_FN, "FN")                                                               \
-  X(TK_RET, "RET") X(TK_LET, "LET") X(TK_I32, "I32") X(TK_STRING, "STRING")
+  X(TK_FN, "fn")                                                               \
+  X(TK_RET, "ret") X(TK_LET, "let") X(TK_I32, "i32") X(TK_STRING, "string")    \
+  X(TK_IF, "if") X(TK_ELSE, "else") X(TK_WHILE, "while")
 #define _LITERALS_                                                             \
   X(TK_ID, "ID")                                                               \
   X(TK_INT_LITERAL, "INT_LITERAL") X(TK_STR_LITERAL, "STR_LITERAL")
 #define _DELIM_                                                                \
   X(TK_LPRN, "(")                                                              \
   X(TK_RPRN, ")")                                                              \
-  X(TK_LBRK, "[") X(TK_RBRK, "]") X(TK_LBRACE, "{") X(TK_RBRACE, "]")
+  X(TK_LBRK, "[") X(TK_RBRK, "]") X(TK_LBRACE, "{") X(TK_RBRACE, "}")
 #define _SYMBOLS_                                                              \
   X(TK_PLUS, "+")                                                              \
   X(TK_MINUS, "-")                                                             \
@@ -58,6 +59,11 @@ enum class ScanErrorKind {
 #define X(err) err,
   _LexErr_
 #undef X
+};
+
+struct ScanError {
+  u32 offset;
+  ScanErrorKind err_kind;
 };
 
 inline ccstr scan_err_to_str(ScanErrorKind kind) noexcept {

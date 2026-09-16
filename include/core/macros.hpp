@@ -16,6 +16,14 @@
     exit(EXIT_FAILURE);                                                        \
   } while (0)
 
+#define PANICF(...) \
+  do {                                                                         \
+    fprintf(stderr, "Paniced at %s:%d:", __FILE__, __LINE__);          \
+    fprintf(stderr, __VA_ARGS__); \
+    exit(EXIT_FAILURE);                                                        \
+  } while (0)
+
+
 #define ASSERT(cond)                                                           \
   do {                                                                         \
     if (!(cond)) {                                                             \
@@ -27,3 +35,10 @@
   do {                                                                         \
     PANIC("unreachable code");                                                 \
   } while (0)
+
+
+#define SWITCH(x) strview __S__ = x; if(0)
+#define CASE(y) }else if(__S__ == y){ 
+#define DEFAULT } else {
+#define DO {
+#define END }
