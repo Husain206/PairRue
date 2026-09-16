@@ -1,66 +1,66 @@
 #include "./include/core/arena.hpp"
 #include "./include/core/option.hpp"
 #include "./include/core/result.hpp"
+#include "include/ast/ast.hpp"
+#include "include/ast/astPrinter.hpp"
+#include "include/core/cmdparser.hpp"
+#include "include/core/macros.hpp"
 #include "include/core/types.hpp"
-#include <cstring>
+#include "include/lexer/interner.hpp"
+#include "include/lexer/lexer.hpp"
+#include "include/lexer/line_index.hpp"
+#include "include/lexer/span.hpp"
+#include "include/lexer/token.hpp"
+#include "include/parser/parser.hpp"
+#include "include/sema/sema.hpp"
+
+#include <cstdio>
 #include <iostream>
-#include <optional>
-#include <variant>
+#include <sys/types.h>
 
-using i32 = int;
+auto main(int argc, char **argv) -> i32 {
 
-struct Node {
-  const char *name;
-  i32 id;
-};
+  /* CORE */
+  CmdParser cmdParse(argc, argv);
+  auto file = cmdParse.file();
 
-enum Error {
-  UNKNOWN_REG,
-};
+  /* LEXER */
+  LineIndex lineIndex(file);
+  Interner interner{};
 
-Result<ccstr, Error> build_temporary_reg(Arena &scratch, const char *prefix,
-                                         int id) {
-  if (strncmp(prefix, "reg", 3) != 0)
-    return Result<ccstr, Error>::err(UNKNOWN_REG);
-  char *buf = static_cast<char *>(scratch.alloc(64, 1));
-  snprintf(buf, 64, "__temp_%s_%d", prefix, id);
+  Lexer lexer(file, interner);
+  LexerState s0{0};
 
-  return Result<ccstr, Error>::ok(buf);
-}
+  // auto step = lexer.next_token(s0);
+  // step = lexer.next_token(s0);
+  // while(step.value().token.kind != TokenKind::TK_EoF){
+  //   std::printf("[%u:%u] Token: %s\n", step.value().token.span.loc.line,
+  //   step.value().token.span.loc.col,
+  //   token_kind_to_str(step.value().token.kind));
 
-auto main(void) -> i32 {
+  //   if(step.value().token.kind == TokenKind::TK_ID || step.value().token.kind
+  //   == TokenKind::TK_STR_LITERAL){
+  //     strview sv = interner.view(step.value().token.symbol_id);
+  //     std::cout << sv << "\n";
+  //   }
 
-  Arena permanent_arena(KiB(1));
-  auto *node1 =
-      static_cast<Node *>(permanent_arena.alloc(sizeof(Node), alignof(Node)));
-  node1->name = "GlobalVar";
-  node1->id = 1;
-  std::printf("permanent memory used (before scratch): %zu bytes\n",
-              permanent_arena.get_marker().used);
-  {
-    ScratchArena scratch(permanent_arena);
+  //   step = lexer.next_token(step.value().next_state);
+  // }
 
-    auto temp_id1 = build_temporary_reg(*scratch.get(), "reg", 101);
-    auto temp_id2 = build_temporary_reg(*scratch.get(), "reg", 102);
 
-    std::printf("inside scratch scope:\n");
-    std::printf("  temp identifiers: %s, %s\n", temp_id1.value(),
-                temp_id2.value());
-    std::printf("  arena memory used (in scratch): %zu bytes\n",
-                permanent_arena.get_marker().used);
+  Arena arena;
 
+  Parser parser(lexer, arena, &interner);
+  Node *nodes = parser.parse_prog();
+
+  ASTPrinter astPrinter(interner);
+  astPrinter.print(nodes);
+
+  Sema sema(&interner, nodes);
+  if(!sema.analyze()){
+    PANICF("something went wrong in sema");
   }
 
-  std::printf("permanent memory used (after scratch scope exit): %zu bytes\n",
-              permanent_arena.get_marker().used);
-
-  auto *node2 =
-      static_cast<Node *>(permanent_arena.alloc(sizeof(Node), alignof(Node)));
-  node2->name = "LocalVar";
-  node2->id = 2;
-
-  std::printf("final permanent memory ysed: %zu bytes\n",
-              permanent_arena.get_marker().used);
-
+  
   return 0;
 }
