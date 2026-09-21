@@ -12,13 +12,13 @@
 
 #define PANIC(s)                                                               \
   do {                                                                         \
-    fprintf(stderr, "Paniced at %s:%d: %s\n", __FILE__, __LINE__, s);          \
+    fprintf(stderr, "\033[31mPaniced at %s:%d: %s\033[0m\n", __FILE__, __LINE__, s);          \
     exit(EXIT_FAILURE);                                                        \
   } while (0)
 
 #define PANICF(...) \
   do {                                                                         \
-    fprintf(stderr, "Paniced at %s:%d:", __FILE__, __LINE__);          \
+    fprintf(stderr, "\033[31mPaniced at %s:%d: \033[0m", __FILE__, __LINE__);          \
     fprintf(stderr, __VA_ARGS__); \
     exit(EXIT_FAILURE);                                                        \
   } while (0)

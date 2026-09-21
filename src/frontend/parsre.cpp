@@ -124,6 +124,7 @@ Node *Parser::parse_led(Node *left, Token op) {
     call->call.callee = left;
     NodeList *args_head = nullptr;
     NodeList **args_tail = &args_head;
+    int size = 0;
     if (peek().kind != TokenKind::TK_RPRN) {
       do {
         Node *arg = parse_expr(Prec::LOWEST);
@@ -134,10 +135,12 @@ Node *Parser::parse_led(Node *left, Token op) {
         elem->node = arg;
         *args_tail = elem;
         args_tail = &elem->next;
+        size++;
       } while (match(TokenKind::TK_COMMA));
     }
     EXPECT_NORETURN(TokenKind::TK_RPRN);
     call->call.args = args_head;
+    call->call.size = size;
     return call;
   }
   default:
@@ -176,7 +179,7 @@ Node *Parser::parse_stmt() {
 
   Node *stmt = PushStructZero(arena_, Node);
   stmt->kind = NodeKind::STMT_EXPR;
-  stmt->binary.lhs = expr; // repurposed for simplicity
+  stmt->expr_stmt.expr = expr;
   return stmt;
 }
 
@@ -286,7 +289,7 @@ Node *Parser::parse_decl() {
 }
 
 Node *Parser::parse_block() {
-  NodeList *head = PushStructZero(arena_, NodeList);
+  NodeList *head = NULL;
   NodeList **tail = &head;
 
   EXPECT_NORETURN(TokenKind::TK_LBRACE);

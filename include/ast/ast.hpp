@@ -31,6 +31,18 @@ enum class NodeKind {
 #undef X
 };
 
+static ccstr node_kind_to_str(NodeKind kind) {
+  switch (kind) {
+#define X(token)                                                               \
+  case NodeKind::token:                                                        \
+    return #token;
+    _DECLS_ _STMTS_ _EXPR_
+  }
+#undef X
+  return "unknown NodeKind";
+}
+
+
 struct Node;
 
 struct NodeList {
@@ -67,14 +79,14 @@ struct Node {
     struct {
       u32 name_id;
       u32 type_id;
-      TypeKind node = TypeKind::Invalid;
+      TypeKind type = TypeKind::Invalid;
       NodeList *params;
     } params;
 
     struct {
       u32 name_id;
       u32 type_id;
-      TypeKind node = TypeKind::Invalid;
+      TypeKind retType = TypeKind::Invalid;
       NodeList *params;
       Node *body;
     } fn_decl;
@@ -99,6 +111,10 @@ struct Node {
     } ret_stmt;
 
     struct {
+      Node* expr;
+    } expr_stmt;
+    
+    struct {
       TokenKind op;
       Node *lhs;
       Node *rhs;
@@ -112,6 +128,7 @@ struct Node {
     struct {
       Node *callee;
       NodeList *args;
+      int size;
     } call;
   };
 };
