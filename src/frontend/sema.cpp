@@ -163,8 +163,22 @@ TypeKind Sema::sema_expr(Node *node) {
     if(it == symbols.end())
       PANICF("symbol doesnt exist '%.*s'", SV(interner_, node->call.callee->symbol_id));
 
-    if(std::get<FnSymbol>(it->second.sym).params.size() != node->call.size)
+    auto fn =  std::get<FnSymbol>(it->second.sym);
+    if(fn.params.size() != node->call.size)
       PANICF("argument count differs from parameter count");
+
+    auto args = node->call.args;
+    int i = 0;
+    while(args && i < node->call.size){
+      TypeKind arg_type = sema_expr(args->node);
+      if(arg_type != fn.params[i])
+        PANICF("arguemnt('%d') type mismatch, expected '%s' got '%s'", i, type_kind_to_str(fn.params[i]), type_kind_to_str(arg_type));
+
+      args = args->next;
+    }
+
+    return fn.ret_type;
+
   }
 
   default:
@@ -192,6 +206,8 @@ Result<Flow, SemaErr> Sema::sema_stmt(Node *node) {
     if (sym.is_some())
       PANICF("symbol already defined '%.*s'",
              SV(interner_, node->var_decl.name_id));
+
+    node->var_decl.type = resolve_type_name(node->var_decl.type_id);
 
     scopes.get_scope().emplace(
         node->var_decl.name_id,
