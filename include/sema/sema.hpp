@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../include/diagnostic/diag.hpp"
 #include "../ast/ast.hpp"
 #include "../core/option.hpp"
 #include "../core/result.hpp"
@@ -14,6 +15,12 @@ enum class SymbolKind {
   SYM_FN,
   SYM_PARAM,
   INVALID,
+};
+
+enum class ScopeKind {
+  Local,
+  Global,
+  Param,
 };
 
 template <typename T> struct List {
@@ -52,6 +59,7 @@ struct VarSymbol {
 
 struct Symbol {
   SymbolKind kind = SymbolKind::INVALID;
+  ScopeKind scopeKind = ScopeKind::Local;
   variant<std::monostate, VarSymbol, FnSymbol, ParamSymbol> sym;
 };
 
@@ -96,7 +104,6 @@ struct Scope {
   std::vector<std::unordered_map<u32, Symbol>> scopes_;
 
 public:
-
   auto push_scope() -> void { scopes_.push_back({}); }
 
   auto pop_scope() -> void { scopes_.pop_back(); }
@@ -105,6 +112,11 @@ public:
     return scopes_.back();
   }
 
+  auto get_global_scope() -> std::unordered_map<u32, Symbol> & {
+    return scopes_.at(0);
+  }
+
+  // consider returning Symbol*
   auto find_recent_sym(u32 id) -> Option<Symbol> {
     auto last_scope = get_scope();
     auto it = last_scope.find(id);
@@ -126,14 +138,14 @@ public:
 struct Sema {
 private:
   Interner &interner_;
+  Diag& diag_;
+  Node &node_;  
 
 public:
-  explicit Sema(Interner *interner, Node *node)
-      : interner_(*interner), node_(*node) {}
+  explicit Sema(Interner *interner, Node *node, Diag& diag)
+      : interner_(*interner), node_(*node), diag_(diag) {}
 
-  Node &node_;
   Scope scopes;
-  std::unordered_map<u32, Symbol> symbols;
   u32 cur_fn;
 
   auto analyze() -> bool;

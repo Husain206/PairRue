@@ -6,6 +6,7 @@
 #include "include/core/cmdparser.hpp"
 #include "include/core/macros.hpp"
 #include "include/core/types.hpp"
+#include "include/diagnostic/diag.hpp"
 #include "include/lexer/interner.hpp"
 #include "include/lexer/lexer.hpp"
 #include "include/lexer/line_index.hpp"
@@ -15,52 +16,60 @@
 #include "include/sema/sema.hpp"
 
 #include <cstdio>
+#include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <ostream>
+#include <sstream>
 #include <sys/types.h>
 
 auto main(int argc, char **argv) -> i32 {
 
   /* CORE */
   CmdParser cmdParse(argc, argv);
+  cmdParse.parse();
   auto file = cmdParse.file();
+  auto filename = cmdParse.filename();
+
+  // std::ifstream ifs("main.rue");
+  // std::ostringstream oss; oss << ifs.rdbuf();
+  // auto file = oss.str();
+  // auto filename = "main.rue";
+
+  /* DIAGNOSTICS */
+  Diag diag(filename, file);
 
   /* LEXER */
   LineIndex lineIndex(file);
   Interner interner{};
 
-  Lexer lexer(file, interner);
+  Lexer lexer(file, interner, diag);
   LexerState s0{0};
-
-  // auto step = lexer.next_token(s0);
-  // step = lexer.next_token(s0);
-  // while(step.value().token.kind != TokenKind::TK_EoF){
-  //   std::printf("[%u:%u] Token: %s\n", step.value().token.span.loc.line,
-  //   step.value().token.span.loc.col,
-  //   token_kind_to_str(step.value().token.kind));
-
-  //   if(step.value().token.kind == TokenKind::TK_ID || step.value().token.kind
-  //   == TokenKind::TK_STR_LITERAL){
-  //     strview sv = interner.view(step.value().token.symbol_id);
-  //     std::cout << sv << "\n";
-  //   }
-
-  //   step = lexer.next_token(step.value().next_state);
-  // }
-
 
   Arena arena;
 
-  Parser parser(lexer, arena, &interner);
+  Parser parser(lexer, arena, &interner, diag);
   Node *nodes = parser.parse_prog();
-
-  ASTPrinter astPrinter(interner);
-  astPrinter.print(nodes);
-
-  Sema sema(&interner, nodes);
-  if(!sema.analyze()){
-    PANICF("something went wrong in sema");
+  if (diag.has_error()) {
+    diag.render_all();
+    return EXIT_FAILURE;
   }
 
-  
+  ASTPrinter astPrinter(interner);
+  if (cmdParse.display_ast())
+    astPrinter.print(nodes);
+
+  Sema sema(&interner, nodes, diag);
+  if (!sema.analyze() && diag.has_error()) {
+    diag.render_all();
+    return EXIT_FAILURE;
+  }
+
+  // if(!sema.analyze()){
+  //   PANICF("something went wrong in sema");
+  // }
+
+  arena.destory_all();
+
   return 0;
 }
