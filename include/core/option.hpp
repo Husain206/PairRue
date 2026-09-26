@@ -46,7 +46,7 @@ public:
   T&& value() && { ASSERT(is_some()); return std::move(std::get<T>(value_)); }
   const T&& value() const && { ASSERT(is_some()); return std::move(std::get<T>(value_)); }
 
-  T value_or(T fallback) const { return is_some() ? std::get<T>(value_) : fallback; }
+  // T value_or(T fallback) const { return is_some() ? std::get<T>(value_) : fallback; }
   T value_or(const T& fallback) const & { return is_some() ? std::get<T>(value_) : fallback; }
   T value_or(T&& fallback) const && { return is_some() ? std::move(std::get<T>(value_)) : std::move(fallback); }
 
