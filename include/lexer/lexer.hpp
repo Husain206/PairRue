@@ -5,6 +5,7 @@
 #include "line_index.hpp"
 #include "span.hpp"
 #include "token.hpp"
+#include "../diagnostic/diag.hpp"
 
 struct LexerState {
   u64 cursor{0};
@@ -35,12 +36,14 @@ struct Lexer {
 
     Result<TokenStep, ScanError> string(LexerState state, u32 start_offset) noexcept;
     Result<TokenStep, ScanError> number(LexerState state, u32 start_offste) const noexcept;
-    Result<TokenStep, ScanError> single_char(LexerState state, u32 start_offste) const noexcept;
-    Result<TokenStep, ScanError> double_char(LexerState state, u32 start_offste) const noexcept;
+    Result<TokenStep, ScanError> single_char(LexerState state, u32 start_offste) const;
+    Result<TokenStep, ScanError> double_char(LexerState state, u32 start_offste) const;
 
 
   public:
-    explicit Lexer(strview src, Interner& interner) : src_(src), interner_(interner) {}
+    explicit Lexer(strview src, Interner& interner, Diag& diag) : src_(src), interner_(interner), diag(diag) {}
+
+    Diag& diag;
 
     [[nodiscard]] Result<TokenStep, ScanError> next_token(LexerState state) noexcept;
     [[nodiscard]] Location resolve_location(u32 offset) const noexcept {

@@ -59,13 +59,18 @@ auto Lexer::string(LexerState state, u32 start_offset) noexcept
   u64 str_start = state.cursor;
   while (str_start < src_.size() && peek(state) != '\"') {
     if (peek(state) == '\n') {
-      return Result<TokenStep, ScanError>::err(ScanError{
-          (u32)start_offset, ScanErrorKind::UNTERMINATED_STRING_LITERAL});
+      Span err_span{src_.data() + start_offset, state.cursor - start_offset, resolve_location(start_offset)};
+      diag.push_diag({SeverityKind::Err, err_span, "unterminated string literal", "string literals cannot contain unescaped newlines"});
+      break;
+      // return Result<TokenStep, ScanError>::err(ScanError{
+      //     (u32)start_offset, ScanErrorKind::UNTERMINATED_STRING_LITERAL});
     }
     state.cursor++;
   }
 
   if (state.cursor >= src_.size()) {
+    Span err_span{src_.data() + start_offset, state.cursor - start_offset, resolve_location(start_offset)};
+    diag.push_diag({SeverityKind::Err, err_span, "unterminated string literal", "string literals cannot contain unescaped newlines"});
     return Result<TokenStep, ScanError>::err(ScanError{
         (u32)start_offset, ScanErrorKind::UNTERMINATED_STRING_LITERAL});
   }
@@ -96,7 +101,7 @@ auto Lexer::number(LexerState state, u32 start_offste) const noexcept
   return Result<TokenStep, ScanError>::ok(TokenStep{tok, state});
 }
 
-auto Lexer::single_char(LexerState state, u32 start_offset) const noexcept
+auto Lexer::single_char(LexerState state, u32 start_offset) const 
     -> Result<TokenStep, ScanError> {
   switch (src_[state.cursor]) {
 #define X(token, tname)                                                        \
@@ -110,6 +115,8 @@ auto Lexer::single_char(LexerState state, u32 start_offset) const noexcept
     _DELIM_ _SYMBOLS_
 #undef X
   }
+  Span err_span{src_.data() + start_offset, state.cursor - start_offset, resolve_location(start_offset)};
+  diag.push_diag({SeverityKind::Err, err_span, "invalid charater"});
   return Result<TokenStep, ScanError>::err(
       ScanError{start_offset, ScanErrorKind::INVALID_CHARACTER});
 }
@@ -172,6 +179,8 @@ auto Lexer::next_token(LexerState state) noexcept
   if (is_single_char_token(c) != TokenKind::TK_INVALID)
     return single_char(state, start_offset);
 
+  Span err_span{src_.data() + start_offset, state.cursor - start_offset, resolve_location(start_offset)};
+  diag.push_diag({SeverityKind::Err, err_span, "unterminated string literal", "string literals cannot contain unescaped newlines"});
   return Result<TokenStep, ScanError>::err(
       ScanError{start_offset, ScanErrorKind::INVALID_CHARACTER});
 }

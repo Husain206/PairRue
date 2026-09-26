@@ -2,21 +2,33 @@
 
 #include "../ast/ast.hpp"
 #include "../lexer/lexer.hpp"
+#include "../diagnostic/diag.hpp"
+#include "../core/option.hpp"
 
+// TODO: make it take an err_msg
 #define EXPECT_NORETURN(tokenKind)                                             \
   Token CONCAT_IMPL(tok, __LINE__) = consume_token();                          \
-  if (CONCAT_IMPL(tok, __LINE__).kind != tokenKind)                            \
-    PANICF("Parser Error: expected token '%s' got '%s'\n",                     \
-           token_kind_to_str(tokenKind),                                       \
-           token_kind_to_str(CONCAT_IMPL(tok, __LINE__).kind));
+  if (CONCAT_IMPL(tok, __LINE__).kind != tokenKind) {                          \
+    diag_.push_diag(                                                            \
+        {SeverityKind::Err, peek().span,                                          \
+         "expected token '" + (string)token_kind_to_str(tokenKind) +           \
+             "' got '" +                                                       \
+             (string)token_kind_to_str(CONCAT_IMPL(tok, __LINE__).kind) +      \
+             "'"});                                                            \
+  }
 
 #define EXPECT_RETURN(tokenKind)                                               \
   ({                                                                           \
     Token tok = consume_token();                                               \
-    if (tok.kind != tokenKind)                                                      \
-      PANICF("Parser Error: expected token '%s' got '%s'\n",                   \
-             token_kind_to_str(tokenKind), token_kind_to_str(tok.kind));            \
-    tok;                                                                \
+    if (tok.kind != tokenKind) {                                               \
+      diag_.push_diag(                                                          \
+          {SeverityKind::Err, peek().span,                                        \
+           "expected token '" + (string)token_kind_to_str(tokenKind) +         \
+               "' got '" +                                                     \
+               (string)token_kind_to_str(tok.kind) +    \
+               "'"});                                                          \
+    }                                                                          \
+    tok;                                                                       \
   });
 
 #define _PREC_                                                                 \
@@ -39,10 +51,11 @@ private:
   Arena *arena_;
   LexerState state_;
   Interner &interner_;
+  Diag& diag_;
 
 public:
-  Parser(Lexer &lexer, Arena &arena, Interner *interner)
-      : lexer_(lexer), arena_(&arena), state_{0}, interner_(*interner) {}
+  Parser(Lexer &lexer, Arena &arena, Interner *interner, Diag& diag)
+      : lexer_(lexer), arena_(&arena), state_{0}, interner_(*interner), diag_(diag) {}
   Node *parse_prog();
 
   // private:
@@ -52,19 +65,20 @@ public:
   bool match(TokenKind kind);
   // Token expect(TokenKind kind);
 
-  u32 parse_type();
+  void synchronize();
+
+  Option<u32> parse_type();
   /* recursive descent parser */
   Node *parse_decl();
   Node *parse_fn();
-  Node* parse_params();
+  Node *parse_params();
 
   Node *parse_block();
   Node *parse_stmt();
-  Node* parse_if();
-  Node* parse_while();
+  Node *parse_if();
+  Node *parse_while();
   Node *parse_ret();
 
-  
   /* PRATT PARSER */
   Node *parse_expr(Prec prec = Prec::LOWEST);
   Node *parse_nud();                     // parses prefix
