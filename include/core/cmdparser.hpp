@@ -10,6 +10,8 @@
 
 struct Flags {
   string file;
+  string filename;
+  bool display_ast = false;
 };
 
 struct CmdParser {
@@ -18,10 +20,9 @@ struct CmdParser {
     char** argv_{nullptr};
     Flags flags_{};
   public:
-    explicit CmdParser(int argc, char** argv) : argc_(argc), argv_(argv) {
-      parse();
-    }
+    explicit CmdParser(int argc, char** argv) : argc_(argc), argv_(argv) {}
 
+  private:
   [[nodiscard]] strview shift() noexcept {
     ASSERT(argc_ > 0 && "argc is 0");
     argc_--;
@@ -37,16 +38,18 @@ struct CmdParser {
   }
 
   [[nodiscard]] ccstr help() const noexcept {
-    ccstr help = "-h --help\t displays this\n-f --file\t <filename> takes in a file\n";
+    ccstr help = "-h --help\t displays this\n-f --file\t <filename> takes in a file\n--display-ast\t duh";
     return help;
   }
 
   [[nodiscard]] ccstr usage() const noexcept {
-    return "Usage: ./file.rue <filename>\n";
+    return "Usage: ./exec <filename>\n";
   }
 
+  public:
   [[nodiscard]] string file() const noexcept {  ASSERT(!flags_.file.empty() && "file flag is not set"); return flags_.file; }
-  
+  [[nodiscard]] string filename() const noexcept { ASSERT(!flags_.filename.empty() && "filename flag is not set"); return flags_.filename; }
+  [[nodiscard]] bool display_ast() const noexcept { return flags_.display_ast; }
 
   void parse() noexcept {
     auto init = shift();
@@ -64,6 +67,12 @@ struct CmdParser {
       if(flag == "-f" || flag == "--file"){
         auto filename = shift();
         flags_.file = readfile(filename);
+        flags_.filename = filename;
+        continue;
+      }
+
+      if(flag == "--display-ast"){
+        flags_.display_ast = true;
         continue;
       }
 
